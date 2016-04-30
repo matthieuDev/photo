@@ -18,8 +18,9 @@
 using namespace std;
 
 
-const string fileName = "data02_tile1";
-const string pathName = "../data/" + fileName + "/data02/" ;
+const string fileName = "data08_teapot";
+
+const string pathName = "../data/" + fileName + "/data08/" ;
 
 vector<Point3D> uniformLight;
 int uniformSize = 0;
@@ -171,6 +172,7 @@ void createUniformImage(){
 	{
 		
 		list<int> current = closest[i];
+		closest[i].clear();
 		Point3D currentLight = icosahedron[i];
 		
 		if (current.size()){
@@ -307,7 +309,7 @@ void createDenominatorImage(double L , double H) {
 		Kil.pop_back();
 		int placeImageMean = best.image;
 		if (trueMean[placeImageMean]< 0.9){
-			dmLight = lights[placeImageMean];
+			dmLight = uniformLight[placeImageMean];
 
 			string addon = pathName +"uniform/image"+ to_string(placeImageMean )+".bmp";
 			char* nameImage = (char*)(addon).c_str();
@@ -322,7 +324,7 @@ void createDenominatorImage(double L , double H) {
 			//add denominator image at the end to exclude it for the next operations.
 			//We need to rewrite the lightvec file so the order of the image and light vectors still are the same
 
-			if (placeImageMean != uniformLight.size()){
+			if (placeImageMean != uniformLight.size()-1){
 
 				uniformLight[placeImageMean] = uniformLight[uniformLight.size() - 1];
 				uniformLight[uniformLight.size() - 1]=dmLight;
@@ -404,9 +406,9 @@ void createNormalEstimation(){
 		{
 			double dmI = Point3D(dmImage[j * 3], dmImage[j * 3 + 1], dmImage[j * 3 + 2]).ll();
 			double I1 = Point3D(data[j * 3], data[j * 3 + 1], data[j * 3 + 2]).ll();
-			a[j][i][0] = I1*dmImage[j * 3] - dmI*data[j * 3];
-			a[j][i][1] = I1*dmImage[j * 3+1] - dmI*data[j * 3+1];
-			a[j][i][2] = I1*dmImage[j * 3+2] - dmI*data[j * 3+2];
+			a[j][i][0] = I1*dmLight.x - dmI*uniformLight[i].x;
+			a[j][i][1] = I1*dmLight.y - dmI*uniformLight[i].y;
+			a[j][i][2] = I1*dmLight.w - dmI*uniformLight[i].w;
 
 		}
 	}
@@ -445,6 +447,7 @@ void createNormalEstimation(){
 
 		
 		
+		//normalEstimation[i] = Point3D(v[pos][0], v[pos][1], v[pos][2]);
 		normalEstimation[i] = Point3D(v[0][pos], v[1][pos], v[2][pos]);
 		
 		
@@ -457,6 +460,7 @@ void normalRefinement(){
 
 }
 
+
 void saveNormal(){
 	string filepath = "../matlab/normal.txt";
 	ofstream myfile;
@@ -467,6 +471,46 @@ void saveNormal(){
 	{
 		myfile << normalEstimation[i].x << " " << normalEstimation[i].y << " " << normalEstimation[i].w << "\n";
 	}
+	myfile.close();
+}
+
+void createMatlabFile() {
+
+	string filepath = "../matlab/photo.m";
+	ofstream myfile;
+	remove(filepath.c_str());
+	myfile.open(filepath);
+
+	myfile << "slant = [";
+
+
+	for (size_t i = 0; i < width; i++)
+	{
+		for (size_t j = 0; j < height; j++)
+		{
+			myfile << asin(normalEstimation[i + j*width].w ) << " ";
+
+		}
+		myfile << "\n";
+	}
+
+	myfile << "];\n";
+
+	myfile << "tilt = [";
+
+
+	for (size_t i = 0; i < width; i++)
+	{
+		for (size_t j = 0; j < height; j++)
+		{
+			myfile << asin(normalEstimation[i + j*width].x)/(Point3D(normalEstimation[i + j*width].x, normalEstimation[i + j*width].y,0).ll()) << " ";
+
+		}
+		myfile << "\n";
+	}
+
+	myfile << "];\n recsurf = shapeletsurf(slant, tilt, 6, 1, 2);\nsurf(recsurf);";
+
 	myfile.close();
 }
 
@@ -485,9 +529,12 @@ int main(int	argc,
 		loadUniformLight();
 	}
 
+	lights.clear();
+
 	cout << "1 = compute denominator Image \n 2 = load denominator Image\n";
 	cin >> choice;
 	if (choice == 1){
+		//todo allow bigger file
 		createDenominatorImage(0.7, 0.9);
 	}
 	else {
@@ -496,16 +543,17 @@ int main(int	argc,
 	
 
 	
-	lights.clear();
-
 	createNormalEstimation();
+
+	uniformLight.clear();
 
 	normalRefinement();
 	
 	saveNormal();
 
+	createMatlabFile();
+
 	cout << "\nend bitch\n";
-	cin >> argc;
 	return 0;
 }
 
