@@ -18,9 +18,9 @@
 using namespace std;
 
 
-const string fileName = "data08_teapot";
+const string fileName = "data10";
 
-const string pathName = "../data/" + fileName + "/data08/" ;
+const string pathName = "../data/" + fileName + "/" ;
 
 vector<Point3D> uniformLight;
 int uniformSize = 0;
@@ -231,6 +231,9 @@ void createUniformImage(){
 
 
 void createDenominatorImage(double L , double H) {
+
+
+
 	int lightSize = uniformLight.size();
 	const int bmpSize = width * height;
 	vector<intensityAndimage> *intensityImage = new vector<intensityAndimage>[bmpSize];
@@ -503,7 +506,7 @@ void createMatlabFile() {
 	{
 		for (size_t j = 0; j < height; j++)
 		{
-			myfile << asin(normalEstimation[i + j*width].x)/(Point3D(normalEstimation[i + j*width].x, normalEstimation[i + j*width].y,0).ll()) << " ";
+			myfile << asin(normalEstimation[i + j*width].x / (Point3D(normalEstimation[i + j*width].x, normalEstimation[i + j*width].y, 0).ll())) << " ";
 
 		}
 		myfile << "\n";
