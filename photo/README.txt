@@ -1,0 +1,1 @@
+Add the photo to analyse in data create inside this file 2 folders : "uniform" and "denominateur image" and in photo.cpp change fileName to the name of the folder inside which there is the photo.
