@@ -18,7 +18,8 @@
 using namespace std;
 
 
-const string fileName = "data10";
+const string fileName = "data09";
+//name folder tom add : "uniform" "denominateur image"
 
 const string pathName = "../data/" + fileName + "/" ;
 
@@ -47,6 +48,7 @@ void getWidthHeight(){
 	readBMP((char*)s, width, height);
 }
 
+//used to create icosahedron form not used in the program
 void loadIcosahedron(){
 	string fileName = "../data/subdivided icosahedron.txt";
 
@@ -86,7 +88,7 @@ void loadLight(){
 	string lightFile = pathName + "lightvec.txt";
 	ifstream input_file(lightFile);
 
-	double x, y, z;
+	float x, y, z;
 	int test;
 
 	while (input_file >> x >> y >> z)
@@ -101,7 +103,7 @@ void loadUniformLight(){
 	string lightFile = pathName + "uniform/lightvec.txt";
 	ifstream input_file(lightFile);
 
-	double x, y, z;
+	float x, y, z;
 	int test;
 	vector<Point3D> lights;
 	while (input_file >> x >> y >> z)
@@ -116,7 +118,7 @@ void loadDenominatorImage(){
 	string lightFile = pathName + "denominateur image/light.txt";
 	ifstream input_file(lightFile);
 
-	double x, y, z;
+	float x, y, z;
 
 	input_file >> x >> y >> z;
 	dmLight = Point3D(x, y, z);
@@ -241,7 +243,7 @@ void createDenominatorImage(double L , double H) {
 	vector<intensityAndimage> intensityMean = vector< intensityAndimage>(lightSize);
 	vector<intensityAndimage> Kil = vector< intensityAndimage>(lightSize);
 
-	double *trueMean = new double[lightSize];
+	float *trueMean = new float[lightSize];
 
 
 	for (size_t i = 0; i < lightSize; i++)
@@ -298,7 +300,7 @@ void createDenominatorImage(double L , double H) {
 
 	for (size_t i = 0; i < lightSize; i++)
 	{
-		trueMean[it->image] = i / (double)lightSize;
+		trueMean[it->image] = i / (float)lightSize;
 		it++;
 	}
 
@@ -383,7 +385,7 @@ void createDenominatorImage(double L , double H) {
 void createNormalEstimation(){
 	normalEstimation = new Point3D[width*height];
 	int bmpSize = width*height;
-	int size = uniformLight.size();
+	int size = uniformLight.size()-1;
 	double ***a = new double**[bmpSize];
 	for (size_t j = 0; j < bmpSize; j++)
 	{
@@ -407,11 +409,11 @@ void createNormalEstimation(){
 		Point3D currentLight = uniformLight[i];
 		for (size_t j = 0; j < bmpSize; j++)
 		{
-			double dmI = Point3D(dmImage[j * 3], dmImage[j * 3 + 1], dmImage[j * 3 + 2]).ll();
-			double I1 = Point3D(data[j * 3], data[j * 3 + 1], data[j * 3 + 2]).ll();
-			a[j][i][0] = I1*dmLight.x - dmI*uniformLight[i].x;
-			a[j][i][1] = I1*dmLight.y - dmI*uniformLight[i].y;
-			a[j][i][2] = I1*dmLight.w - dmI*uniformLight[i].w;
+			float dmI = Point3D(dmImage[j * 3], dmImage[j * 3 + 1], dmImage[j * 3 + 2]).ll();
+			float I1 = Point3D(data[j * 3], data[j * 3 + 1], data[j * 3 + 2]).ll();
+			a[j][i][0] = (I1*dmLight.x - dmI*uniformLight[i].x)/5000;
+			a[j][i][1] = (I1*dmLight.y - dmI*uniformLight[i].y) / 5000;
+			a[j][i][2] = (I1*dmLight.w - dmI*uniformLight[i].w) / 5000;
 
 		}
 	}
@@ -439,19 +441,28 @@ void createNormalEstimation(){
 		
 		svdcmp(a[i], size, 3, w, v);
 
-		int min = w[0], pos = 0;
+		float min = w[0];
+		int pos = 0;
 		for (size_t j = 1; j < 3; j++)
 		{
 			if (min > w[j]){
 				min = w[j];
 				pos = j;
 			}
+			
 		}
+		//Point3D toAdd = Point3D(v[pos][0], v[pos][1], v[pos][2]);
+		Point3D toAdd = Point3D(v[0][pos], v[1][pos], v[2][pos]);
 
+		float ll = toAdd.ll();
+		toAdd = Point3D(toAdd.x/ ll, toAdd.y/ ll, toAdd.w/ ll);
+		if (toAdd.w < 0) {
+			toAdd.x *= -1;
+			toAdd.y *= -1;
+			toAdd.w *= -1;
+		}
 		
-		
-		//normalEstimation[i] = Point3D(v[pos][0], v[pos][1], v[pos][2]);
-		normalEstimation[i] = Point3D(v[0][pos], v[1][pos], v[2][pos]);
+		normalEstimation[i] =toAdd;
 		
 		
 		
@@ -512,7 +523,7 @@ void createMatlabFile() {
 		myfile << "\n";
 	}
 
-	myfile << "];\n recsurf = shapeletsurf(slant, tilt, 6, 1, 2);\nsurf(recsurf);";
+	myfile << "];\n recsurf = shapeletsurf(slant, tilt, 6, 1, 2);\nsurf(recsurf);\ncamlight right;\ncamlight left; ";
 
 	myfile.close();
 }
@@ -537,7 +548,6 @@ int main(int	argc,
 	cout << "1 = compute denominator Image \n 2 = load denominator Image\n";
 	cin >> choice;
 	if (choice == 1){
-		//todo allow bigger file
 		createDenominatorImage(0.7, 0.9);
 	}
 	else {
@@ -547,6 +557,8 @@ int main(int	argc,
 
 	
 	createNormalEstimation();
+
+	
 
 	uniformLight.clear();
 
@@ -560,4 +572,4 @@ int main(int	argc,
 	return 0;
 }
 
-//used to create icosahedron form
+
